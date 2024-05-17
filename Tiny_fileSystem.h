@@ -27,15 +27,11 @@ public:
 
     FileSystem();
     ~FileSystem();
-
     void FormatDevice(); // Format the device
-
     void LoadSuperBlock(); // Load the superblock into memory
     void Update(); // Update the file system metadata
-
-    Inode* IAlloc(); // Allocate an Inode
-    void IFree(int number); // Free an Inode
-
     Buf* Alloc(); // Allocate a block
     void Free(int blkno); // Free a block
+    Inode* IAlloc(); // Allocate an Inode
+    void IFree(int number); // Free an Inode
 };

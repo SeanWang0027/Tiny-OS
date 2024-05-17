@@ -8,7 +8,7 @@
 class User
 {
 public:
-	static const int EAX = 0; // u.ar0[EAX]；访问现场保护区中EAX寄存器的偏移量
+	static const int EAX = 0; 
 
 	enum ErrorCode
 	{
@@ -49,19 +49,19 @@ public:
 	};
 
 public:
-	Inode *u_cdir;		   // 指向当前目录的Inode指针
-	Inode *u_pdir;		   // 指向父目录的Inode指针
-	DirectoryEntry u_dent;			   // 当前目录的目录项
-	char u_dbuf[DirectoryEntry::DIRSIZ]; // 当前路径分量
-	string curDirPath;				   // 当前工作目录完整路径
-	string dirp;					   // 系统调用参数(一般用于Pathname)的指针
+	Inode *u_cdir;
+	Inode *u_pdir;		
+	DirectoryEntry u_dent;	
+	char u_dbuf[DirectoryEntry::DIRSIZ];
+	string curDirPath;				
+	string dirp;			
 
-	int u_arg[5]; // 存放当前系统调用参数
-	/* 系统调用相关成员 */
-	unsigned int u_ar0[5]; //    指向核心栈现场保护区中EAX寄存器
-	ErrorCode u_error; // 存放错误码
-	OpenFiles u_ofiles;		 // 进程打开文件描述符表对象
-	IOParameter u_IOParam;	 // 记录当前读、写文件的偏移量，用户目标区域和剩余字节数参数
+	int u_arg[5]; 
+
+	unsigned int u_ar0[5]; 
+	ErrorCode u_error; 
+	OpenFiles u_ofiles;	
+	IOParameter u_IOParam;	
 	string ls_str;
 
 public:
@@ -78,12 +78,9 @@ public:
 	void fseek(string fd, string offset, string origin);
 	void fwrite(string fd, string inFile, string size);
 	void fread(string fd, string outFile, string size);
-	void frename(string ori, string cur); // 重命名文件、文件夹
-	void ftree(string path);			  // 打印树状目录
 
 private:
 	bool checkError();
 	bool checkPath(string path);
 	void __userCd__(string dirName);
-	void __userTree__(string path, int depth); // 内部打印树状目录
 };

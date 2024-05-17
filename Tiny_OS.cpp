@@ -3,7 +3,6 @@
 #include "Tiny_system.h"
 #include "Tiny_user.h"
 #include "Tiny_Superblock.h"
-
 using namespace std;
 Disk myDisk;
 BufferManager myBufferManager;
@@ -13,8 +12,6 @@ FileSystem myFileSystem;
 InodeTable myInodeTable;
 SystemCall mySystemCall;
 User myUser;
-
-
 
 void welcome()
 {
@@ -94,8 +91,6 @@ bool exec_args(string cmd)
 	else if (cmd == "fread"){
 	    string fd, infile, size;
 		cin >> fd >> infile >> size;
-		cout << "Read out successfully" << endl;
-		return true;
 		myUser.fread(fd, infile, size);
 	}
 	else if (cmd == "fseek"){
@@ -108,7 +103,6 @@ bool exec_args(string cmd)
 		cin >> filename;
 		if (filename[0] != '/')
 			filename = myUser.curDirPath + filename;
-		
 		myUser.fdelete(filename);
 	}
 	else if (cmd == "help"){

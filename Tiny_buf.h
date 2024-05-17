@@ -23,18 +23,14 @@ public:
 
 public:
     unsigned int b_flags; // Buffer flags
-
     Buf* b_forw = NULL; // Forward pointer in the buffer list
     Buf* b_back = NULL; // Backward pointer in the buffer list
-
-    int b_wcount = 0; // Word count for I/O transfer
-    unsigned char* b_addr = NULL; // Memory address of the buffer
     int b_blkno = -1; // Block number on disk
     int b_no = 0; // Buffer number
-
+	int b_wcount = 0; // Word count for I/O transfer
+    unsigned char* b_addr = NULL; // Memory address of the buffer
     // Constructor
     Buf();
-
     // Reset buffer state
     void Reset();
 };

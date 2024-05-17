@@ -8,33 +8,32 @@ using namespace std;
 class SystemCall
 {
 public:
-	//目录搜索模式，用于NameI()函数
+	// Directory search modes for the NameI() function
 	enum DirectorySearchMode
 	{
-		OPEN = 0,   //以打开文件方式搜索目录
-		CREATE = 1, //以新建文件方式搜索目录
-		DELETE = 2  //以删除文件方式搜索目录
+		OPEN = 0,   // Search directory in open file mode
+		CREATE = 1, // Search directory in create file mode
+		DELETE = 2  // Search directory in delete file mode
 	};
 
 public:
-
-	Inode* rootDirInode;         //根目录内存Inode
+	Inode* rootDirInode; // Root directory in-memory Inode
 
 public:
 	SystemCall();
-	void Open();                          //Open()系统调用处理过程
-	void Creat();                         //Creat()系统调用处理过程
-	void Open1(Inode* pInode, int trf);   //Open()、Creat()系统调用的公共部分
-	void Close();                         //Close()系统调用处理过程                  
-	void Seek();                          //Seek()系统调用处理过程
-	void Read();                          //Read()系统调用处理过程
-	void Write();                         //Write()系统调用处理过程
-	void Rdwr(enum File::FileFlags mode); //读写系统调用公共部分代码
-	Inode* NameI(enum DirectorySearchMode mode);//目录搜索，将路径转化为相应的Inode返回上锁后的Inode
-	Inode* MakNode(int mode);             //被Creat()系统调用使用，用于为创建新文件分配内核资源
-	void UnLink();                        //取消文件
-	void WriteDir(Inode* pInode);         //向父目录的目录文件写入一个目录项
-	void ChDir();                         //改变当前工作目录
-	void Ls();                            //列出当前Inode节点的文件项
-	void Rename(string ori, string cur);  //重命名文件、文件夹
+	void Open();                          // Process the Open() system call
+	void Creat();                         // Process the Creat() system call
+	void Open_(Inode* pInode, int trf);   // Common part of the Open() and Creat() system calls
+	void Close();                         // Process the Close() system call
+	void Seek();                          // Process the Seek() system call
+	void Read();                          // Process the Read() system call
+	void Write();                         // Process the Write() system call
+	void Rdwr(enum File::FileFlags mode); // Common part of the read and write system calls
+	Inode* NameI(enum DirectorySearchMode mode); // Directory search, converting a path to the corresponding locked Inode
+	Inode* MakNode(int mode);             // Used by the Creat() system call to allocate kernel resources for creating a new file
+	void UnLink();                        // Unlink a file
+	void WriteDir(Inode* pInode);         // Write a directory entry to the parent directory's directory file
+	void ChDir();                         // Change the current working directory
+	void Ls();                            // List the file entries of the current Inode
+	void Rename(string ori, string cur);  // Rename a file
 };

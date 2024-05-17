@@ -50,6 +50,8 @@ public:
     // Set the file object at the given file descriptor
     void SetF(int fd, File* pFile);
 
+    bool Judge(int fd);
+
 private:
     File* processOpenFileTable[NOFILES]; // Array of pointers to open files
 };
@@ -61,7 +63,7 @@ public:
     // Constructor
     IOParameter();
     
-    unsigned char* m_Base;  // Base address of the buffer
-    int m_Offset;           // File offset for the operation
-    int m_Count;            // Number of bytes to read/write
+    unsigned char* m_Base = 0;  // Base address of the buffer
+    int m_Offset = 0;           // File offset for the operation
+    int m_Count = 0;            // Number of bytes to read/write
 };

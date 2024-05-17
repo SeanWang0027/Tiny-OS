@@ -6,35 +6,31 @@ extern BufferManager myBufferManager;
 extern FileSystem myFileSystem;
 extern InodeTable myInodeTable;
 
-/*==============================class OpenFileTable===================================*/
 void OpenFileTable::Reset() 
 {
 	for (int i = 0; i < OpenFileTable::NFILE; i++)
 		m_File[i].Reset();
 }
 
-
-/*作用：进程打开文件描述符表中找的空闲项  之 下标  写入 u_ar0[EAX]*/
 File* OpenFileTable::FAlloc()
 {
 	int fd;
 
-	/* 在进程打开文件描述符表中获取一个空闲项 */
+	/* Get a free slot in the process open file descriptor table */
 	fd = myUser.u_ofiles.AllocFreeSlot();
 
-	if(fd < 0)	{
+	if (fd < 0) {
 		return NULL;
 	}
 
-	for(int i = 0; i < OpenFileTable::NFILE; i++)
-	{
-		/* f_count==0表示该项空闲 */
-		if(this->m_File[i].f_count == 0) {
-			/* 建立描述符和File结构的勾连关系 */
+	for (int i = 0; i < OpenFileTable::NFILE; i++) {
+		/* f_count == 0 indicates that this entry is free */
+		if (this->m_File[i].f_count == 0) {
+			/* Establish the link between the descriptor and the File structure */
 			myUser.u_ofiles.SetF(fd, &this->m_File[i]);
-			/* 增加对file结构的引用计数 */
+			/* Increase the reference count of the file structure */
 			this->m_File[i].f_count++;
-			/* 清空文件读、写位置 */
+			/* Clear the file read/write position */
 			this->m_File[i].f_offset = 0;
 			return (&this->m_File[i]);
 		}
@@ -43,22 +39,19 @@ File* OpenFileTable::FAlloc()
 	return NULL;
 }
 
+
 void OpenFileTable::CloseF(File *pFile)
 {
 	if(pFile->f_count <= 1)	{
 		myInodeTable.IPut(pFile->f_inode);
 	}
 
-	/* 引用当前File的进程数减1 */
 	pFile->f_count--;
 }
 
-/*==============================class InodeTable===================================*/
-/*  定义内存Inode表的实例 */
-
 InodeTable::InodeTable()
 {
-	//nothing to do here
+
 }
 
 void InodeTable::Reset()
@@ -71,33 +64,24 @@ void InodeTable::Reset()
 Inode* InodeTable::IGet(int inumber)
 {
 	Inode* pInode;
-	/* 检查指定设备dev中编号为inumber的外存Inode是否有内存拷贝 */
     int index = this->IsLoaded(inumber);
-    if(index >= 0)	/* 找到内存拷贝 */ {
+    if(index >= 0)	{
         pInode = &(this->m_Inode[index]);
         pInode->i_count++;
         return pInode;
     }
-    /* 没有Inode的内存拷贝，则分配一个空闲内存Inode */
     else {
         pInode = this->GetFreeInode();
-        /* 若内存Inode表已满，分配空闲Inode失败 */
         if(NULL == pInode)	{
-            cout << "内存 Inode 表溢出!" << endl;
+            cout << "Inode Table is full!" << endl;
             myUser.u_error = User::U_ENFILE;
             return NULL;
         }
-        /* 分配空闲Inode成功，将外存Inode读入新分配的内存Inode */
         else{
-            /* 设置新的设备号、外存Inode编号，增加引用计数，对索引节点上锁 */
             pInode->i_number = inumber;
             pInode->i_count++;
-            /* 将该外存Inode读入缓冲区 */
             Buf* pBuf = myBufferManager.Bread(FileSystem::INODE_ZONE_START_SECTOR + inumber / FileSystem::INODE_NUMBER_PER_SECTOR );
 			pInode->ICopy(pBuf, inumber);
-
-            /* 将缓冲区中的外存Inode信息拷贝到新分配的内存Inode中 */
-            /* 释放缓存 */
             myBufferManager.Brelse(pBuf);
             return pInode;
         }
@@ -106,47 +90,48 @@ Inode* InodeTable::IGet(int inumber)
 	return NULL;	/* GCC likes it! */
 }
 
-/* close文件时会调用Iput
- *      主要做的操作：内存i节点计数 i_count--；若为0，释放内存 i节点、若有改动写回磁盘
- * 搜索文件途径的所有目录文件，搜索经过后都会Iput其内存i节点。路径名的倒数第2个路径分量一定是个
- *   目录文件，如果是在其中创建新文件、或是删除一个已有文件；再如果是在其中创建删除子目录。那么
- *   	必须将这个目录文件所对应的内存 i节点写回磁盘。
- *   	这个目录文件无论是否经历过更改，我们必须将它的i节点写回磁盘。
- * */
+/* When closing a file, Iput is called
+ *      Main actions: Decrease memory inode count (i_count--); if zero, free memory inode and write back to disk if modified
+ * All directory files traversed during file search will have their memory inodes Iput after traversal.
+ *   The second last path component in a pathname is always a directory file. If creating or deleting a file within it,
+ *   or creating or deleting a subdirectory, the memory inode of this directory file must be written back to the disk.
+ *   Regardless of whether this directory file has been modified, its inode must be written back to the disk.
+ */
 void InodeTable::IPut(Inode *pNode)
 {
-	/* 当前进程为引用该内存Inode的唯一进程，且准备释放该内存Inode */
-	if(pNode->i_count == 1) {
+	/* The current process is the only one referencing this memory inode and is ready to release it */
+	if (pNode->i_count == 1) {
 
-		/* 该文件已经没有目录路径指向它 */
-		if(pNode->i_nlink <= 0)	{
-			/* 释放该文件占据的数据盘块 */
+		/* The file is no longer pointed to by any directory path */
+		if (pNode->i_nlink <= 0) {
+			/* Free the data blocks occupied by this file */
 			pNode->ITrunc();
 			pNode->i_mode = 0;
-			/* 释放对应的外存Inode */
+			/* Free the corresponding on-disk inode */
 			myFileSystem.IFree(pNode->i_number);
 		}
 
-		/* 更新外存Inode信息 */
+		/* Update the on-disk inode information */
 		pNode->IUpdate((int)time(NULL));
-		/* 清除内存Inode的所有标志位 */
+		/* Clear all flags of the memory inode */
 		pNode->i_flag = 0;
-		/* 这是内存inode空闲的标志之一，另一个是i_count == 0 */
+		/* This is one of the indicators that the memory inode is free, the other being i_count == 0 */
 		pNode->i_number = -1;
 	}
 
-	/* 减少内存Inode的引用计数，唤醒等待进程 */
+	/* Decrease the reference count of the memory inode and wake up waiting processes */
 	pNode->i_count--;
 }
 
+
 void InodeTable::UpdateInodeTable()
 {
-	for(int i = 0; i < InodeTable::NINODE; i++)	{
+	for (int i = 0; i < InodeTable::NINODE; i++) {
 		/* 
-		 * 如果Inode对象没有被上锁，即当前未被其它进程使用，可以同步到外存Inode；
-		 * 并且count不等于0，count == 0意味着该内存Inode未被任何打开文件引用，无需同步。
+		 * If the Inode object is not locked, i.e., it is not currently being used by other processes, it can be synchronized to the on-disk Inode;
+		 * and count is not zero. count == 0 means this memory Inode is not referenced by any open files and does not need to be synchronized.
 		 */
-		if( this->m_Inode[i].i_count != 0 ) {
+		if (this->m_Inode[i].i_count != 0) {
 			this->m_Inode[i].IUpdate((int)time(NULL));
 		}
 	}
@@ -154,9 +139,8 @@ void InodeTable::UpdateInodeTable()
 
 int InodeTable::IsLoaded(int inumber)
 {
-	/* 寻找指定外存Inode的内存拷贝 */
-	for(int i = 0; i < InodeTable::NINODE; i++) {
-		if( this->m_Inode[i].i_number == inumber && this->m_Inode[i].i_count != 0 )	{
+	for (int i = 0; i < InodeTable::NINODE; i++) {
+		if (this->m_Inode[i].i_number == inumber && this->m_Inode[i].i_count != 0) {
 			return i;	
 		}
 	}
@@ -165,11 +149,11 @@ int InodeTable::IsLoaded(int inumber)
 
 Inode* InodeTable::GetFreeInode()
 {
-	for(int i = 0; i < InodeTable::NINODE; i++) {
-		/* 如果该内存Inode引用计数为零，则该Inode表示空闲 */
-		if(this->m_Inode[i].i_count == 0) {
+	for (int i = 0; i < InodeTable::NINODE; i++) {
+		if (this->m_Inode[i].i_count == 0) {
 			return &(this->m_Inode[i]);
 		}
 	}
-	return NULL;	/* 寻找失败 */
+	return NULL;
 }
+
